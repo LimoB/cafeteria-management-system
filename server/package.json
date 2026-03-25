@@ -1,0 +1,62 @@
+{
+  "name": "server",
+  "version": "1.1.0",
+  "description": "School Cafeteria Management System - TypeScript Drizzle Edition",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "lint": "tsc --noEmit",
+    "generate": "drizzle-kit generate",
+    "push": "drizzle-kit push",
+    "studio": "drizzle-kit studio",
+    "seed": "tsx src/db/seed.ts",
+    "backup": "cp canteen.db ./backups/canteen_$(date +%F_%T).db"
+  },
+  "keywords": [
+    "typescript",
+    "drizzle",
+    "sqlite",
+    "mpesa",
+    "cloudinary"
+  ],
+  "author": "Boaz Kipchirchir",
+  "license": "ISC",
+  "dependencies": {
+    "@libsql/client": "^0.17.2",
+    "axios": "^1.6.0",
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.0.0",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "drizzle-orm": "^0.45.1",
+    "express": "^4.19.0",
+    "google-auth-library": "^9.0.0",
+    "googleapis": "^144.0.0",
+    "jsonwebtoken": "^9.0.0",
+    "moment": "^2.30.1",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "multer-storage-cloudinary": "^4.0.0",
+    "nanoid": "^5.0.0",
+    "nodemailer": "^6.9.0",
+    "picocolors": "^1.1.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.7",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/morgan": "^1.9.9",
+    "@types/multer": "^1.4.11",
+    "@types/node": "^20.12.0",
+    "@types/nodemailer": "^6.4.14",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.7.1",
+    "typescript": "^5.4.0"
+  }
+}

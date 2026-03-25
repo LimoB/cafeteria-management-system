@@ -1,0 +1,41 @@
+.env
+/server/node_modules/
+/server/dist/
+/server/api.rest
+/server/.env
+
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/cafeteria-frontend/node_modules/
+/cafeteria-frontend/.pnp
+/cafeteria-frontend/.pnp.js
+
+# testing
+/cafeteria-frontend/coverage
+
+# next.js
+/cafeteria-frontend/.next/
+/cafeteria-frontend/out/
+# production
+/cafeteria-frontend/build/
+
+# misc
+/cafeteria-frontend/.DS_Store
+/cafeteria-frontend/*.pem
+
+# debug
+/cafeteria-frontend/npm-debug.log*
+/cafeteria-frontend/yarn-debug.log*
+/cafeteria-frontend/yarn-error.log*
+/cafeteria-frontend/.pnpm-debug.log*
+
+# local env files
+/cafeteria-frontend/.env*.local
+
+# vercel
+/cafeteria-frontend/.vercel
+
+# typescript
+/cafeteria-frontend/*.tsbuildinfo
+/cafeteria-frontend/next-env.d.ts

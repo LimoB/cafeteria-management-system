@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom LU-Canteen Colors */
+@layer base {
+  :root {
+    --primary: 220 38 38; /* Red-600 */
+    --primary-foreground: 255 255 255;
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
