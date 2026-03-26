@@ -53,23 +53,38 @@ export const createCustomOrder = async (req: AuthenticatedRequest, res: Response
 export const updateCustomOrder = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
+    const updateData = req.body;
+
     if (!req.user) return res.status(401).json({ success: false, message: "Unauthorized" });
 
     const existingOrder = await CustomOrderService.getCustomOrderById(id);
     if (!existingOrder) return res.status(404).json({ success: false, message: "Order not found" });
 
-    // SECURITY: Users can only update their own (e.g., changing description before approval)
-    // Admins can update anything (e.g., setting the price or approval status)
+    // --- SECURITY CHECKS ---
+    
+    // 1. Ownership Check
     if (req.user.role !== "admin" && existingOrder.userId !== req.user.id) {
       return res.status(403).json({ success: false, message: "Forbidden: Access Denied" });
     }
 
-    // If a user is trying to update their own order AFTER it's been approved, block them
-    if (req.user.role !== "admin" && existingOrder.approvalStatus !== "pending") {
-      return res.status(400).json({ success: false, message: "Cannot modify an order already in review" });
+    // 2. Prevent users from updating fields they shouldn't touch
+    if (req.user.role !== "admin") {
+       // If user is trying to change price or approvalStatus, block it
+       if (updateData.price || updateData.approvalStatus || updateData.paymentStatus) {
+          return res.status(403).json({ success: false, message: "Only admins can update price or status" });
+       }
+       // Prevent modification if already reviewed
+       if (existingOrder.approvalStatus !== "pending") {
+          return res.status(400).json({ success: false, message: "Cannot modify an order already in review" });
+       }
     }
 
-    const updated = await CustomOrderService.updateCustomOrderService(id, req.body);
+    // 3. Prevent Admin from changing price AFTER it's paid
+    if (existingOrder.paymentStatus === 'completed' && updateData.price) {
+        return res.status(400).json({ success: false, message: "Cannot change price of a paid order" });
+    }
+
+    const updated = await CustomOrderService.updateCustomOrderService(id, updateData);
     
     res.status(200).json({ 
       success: true, 
@@ -82,9 +97,8 @@ export const updateCustomOrder = async (req: AuthenticatedRequest, res: Response
 };
 
 /**
- * 4. Pay Custom Order: 
- * Validates the order and ensures it's ready for M-Pesa.
- * The actual STK push is handled by triggerStkPush in PaymentController.
+ * 4. Pay Custom Order Validation
+ * This acts as a 'pre-flight' check before the Frontend triggers the actual M-Pesa STK Push
  */
 export const payCustomOrder = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
@@ -94,34 +108,25 @@ export const payCustomOrder = async (req: AuthenticatedRequest, res: Response, n
     const order = await CustomOrderService.getCustomOrderById(id);
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
 
-    // 1. Ownership Check
+    // Validate State
     if (order.userId !== req.user.id) {
-      return res.status(403).json({ success: false, message: "Forbidden: You can only pay for your own orders" });
+      return res.status(403).json({ success: false, message: "You can only pay for your own orders" });
     }
 
-    // 2. State Check: Must be approved by Admin AND have a price
-    if (order.approvalStatus !== 'approved') {
-      return res.status(400).json({ success: false, message: "Order is not yet approved by the Canteen Admin" });
+    if (order.approvalStatus !== 'approved' || !order.price || order.price <= 0) {
+      return res.status(400).json({ success: false, message: "This order is not ready for payment (No price quote found)" });
     }
 
-    if (!order.price || order.price <= 0) {
-      return res.status(400).json({ success: false, message: "No price has been quoted for this request yet" });
-    }
-
-    // 3. Payment Status Check: Don't allow double payment
     if (order.paymentStatus === 'completed') {
-      return res.status(400).json({ success: false, message: "This order is already paid for" });
+      return res.status(400).json({ success: false, message: "Order is already paid" });
     }
 
-    // SUCCESS: Return the order details. 
-    // The Frontend will now take this 'price' and 'id' and call /api/payments/stkpush
     res.status(200).json({ 
       success: true, 
-      message: "Order validated. Proceed to M-Pesa payment.", 
       data: {
         orderId: order.id,
         amount: order.price,
-        phoneNumber: req.user.phone // Suggesting the phone number to use
+        phone: req.user.phone 
       } 
     });
   } catch (error) {
@@ -129,7 +134,7 @@ export const payCustomOrder = async (req: AuthenticatedRequest, res: Response, n
   }
 };
 
-// 4. Delete Order: Admin or Owner
+// 5. Delete Order
 export const deleteCustomOrder = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
@@ -138,12 +143,12 @@ export const deleteCustomOrder = async (req: AuthenticatedRequest, res: Response
     const existingOrder = await CustomOrderService.getCustomOrderById(id);
     if (!existingOrder) return res.status(404).json({ success: false, message: "Order not found" });
 
+    // Security check
     if (req.user.role !== "admin" && existingOrder.userId !== req.user.id) {
-      return res.status(403).json({ success: false, message: "Forbidden: Access Denied" });
+      return res.status(403).json({ success: false, message: "Access Denied" });
     }
 
     await CustomOrderService.deleteCustomOrderService(id);
-    
     res.status(200).json({ success: true, message: "Custom request removed" });
   } catch (error) {
     next(error);

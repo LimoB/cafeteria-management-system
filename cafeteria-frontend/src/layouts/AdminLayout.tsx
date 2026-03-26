@@ -33,7 +33,7 @@ const AdminLayout: React.FC = () => {
 
   const handleLogout = async () => {
     await dispatch(logout());
-    navigate("/auth/login");
+    navigate("/auth/admin-login");
   };
 
   return (

@@ -78,19 +78,21 @@ export const customOrders = sqliteTable('custom_orders', {
   userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
   description: text('description').notNull(),
   
-  // New: Price field for Admin to set after review
   price: real('price').default(0),
   
-  // Status Enums
+  // These stay identical to the 'orders' table
   status: text('status', { enum: OrderStatus }).notNull().default('placed'),
-  approvalStatus: text('approval_status', { enum: ApprovalStatus }).notNull().default('pending'),
   paymentStatus: text('payment_status', { enum: PaymentStatus }).notNull().default('pending'),
+  
+  // This is the only unique field for custom orders
+  approvalStatus: text('approval_status', { enum: ApprovalStatus }).notNull().default('pending'),
   
   takeawayLocation: text('takeaway_location').notNull(),
   
-  // M-Pesa Tracking for Custom Orders
+  // Standardize these naming conventions across both tables
   mpesaMerchantRequestId: text('merchant_request_id'),
   mpesaCheckoutRequestId: text('checkout_request_id'),
+  mpesaReceiptNumber: text("mpesa_receipt_number"), // Added this to match orders table
   
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 });
