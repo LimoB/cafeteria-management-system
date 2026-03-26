@@ -10,6 +10,7 @@ import AdminOrders from '../pages/admin/orders/AdminOrders';
 import AdminCustomOrders from '../pages/admin/custom-orders/AdminCustomOrders';
 import UserList from '../pages/admin/users/UserList';
 import AddUser from '../pages/admin/users/AddUser'; // Import the new page component
+import PaymentHistory from '../pages/admin/orders/PaymentHistory';
 
 const AdminRoutes = () => {
   return (
@@ -37,6 +38,10 @@ const AdminRoutes = () => {
           <Route path="users" element={<UserList />} />
           {/* New Path for Adding/Registering Users */}
           <Route path="users/add" element={<AddUser />} />
+
+           {/* Payment Management */}
+          <Route path="payments" element={<PaymentHistory />} />
+          
         </Route>
 
       </Route>

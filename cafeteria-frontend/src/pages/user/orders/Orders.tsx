@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '../../../app/hooks';
 import { fetchAllOrders } from '../../../app/slices/orderSlice';
-import { fetchPaymentHistory, initiateMpesaPayment } from '../../../app/slices/paymentSlice'; 
+import { initiateMpesaPayment } from '../../../app/slices/paymentSlice'; 
 import { fetchUserProfile } from '../../../app/slices/userSlice';
 import { 
   Clock, AlertCircle, Utensils, RefreshCw, ChevronRight, CreditCard, 
@@ -21,8 +21,6 @@ const Orders: React.FC = () => {
   const { orders = [], isLoading: ordersLoading } = useAppSelector((state) => state.orders);
   const { role, user: authUser } = useAppSelector((state) => state.auth);
   const { selectedUser } = useAppSelector((state) => state.users);
-  // Accessing history with a fallback to prevent .findIndex or .some errors
-  const { history = [] } = useAppSelector((state) => state.payments);
   
   const user = (selectedUser || authUser) as UserProfile | null;
   
@@ -33,34 +31,21 @@ const Orders: React.FC = () => {
   const isAdmin = role === 'admin';
 
   useEffect(() => {
-    console.log("LOG: Initializing Orders Data Fetch");
+    // Only fetch orders and profile. History is now a separate concern.
     dispatch(fetchAllOrders(isAdmin));
-    dispatch(fetchPaymentHistory(isAdmin));
     if (authUser?.id && !selectedUser) {
       dispatch(fetchUserProfile(Number(authUser.id)));
     }
   }, [dispatch, isAdmin, authUser?.id, selectedUser]);
 
-  useEffect(() => {
-    console.log("LOG: Payment History Updated", history);
-    if (!Array.isArray(history)) {
-      console.error("CRITICAL: Payment history is not an array!", history);
-    }
-  }, [history]);
-
   const refreshData = () => {
-    console.log("LOG: Manual Refresh Triggered");
     dispatch(fetchAllOrders(isAdmin));
   };
 
   const handlePayment = async (orderId: string, amount: number) => {
     const targetPhone = customPhone || user?.phone;
 
-    console.log(`LOG: Initiating M-Pesa Payment for Order ${orderId}`);
-    console.log(`LOG: Target Amount: ${amount}, Target Phone: ${targetPhone}`);
-
     if (!targetPhone || targetPhone.trim() === '') {
-      console.warn("WARN: Payment blocked - No phone number available");
       toast.error("Phone number missing! Redirecting to profile...");
       setTimeout(() => navigate('/profile'), 2000);
       return;
@@ -69,17 +54,17 @@ const Orders: React.FC = () => {
     setProcessingId(orderId);
     try {
       const cleanPhone = targetPhone.replace(/\s/g, '');
-      const result = await dispatch(initiateMpesaPayment({
+      await dispatch(initiateMpesaPayment({
           orderId, 
           amount,
           phoneNumber: cleanPhone
       })).unwrap();
       
-      console.log("LOG: STK Push Dispatch Success", result);
       toast.success(`STK Push sent to ${targetPhone}`);
       setEditingOrderId(null);
+      // Refresh orders to catch status updates
+      refreshData();
     } catch (error: any) {
-      console.error("ERROR: M-Pesa Initiation Failed", error);
       toast.error(error?.message || "Payment failed");
     } finally {
       setProcessingId(null);
@@ -192,6 +177,7 @@ const Orders: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Security Token / Order Suffix */}
                   <div className="lg:w-48 bg-slate-900 rounded-[2rem] p-6 text-center shadow-xl shadow-slate-200 relative overflow-hidden group-hover:scale-105 transition-transform">
                     <div className="absolute top-1/2 -left-2 w-4 h-4 bg-white rounded-full -translate-y-1/2" />
                     <div className="absolute top-1/2 -right-2 w-4 h-4 bg-white rounded-full -translate-y-1/2" />
@@ -241,7 +227,7 @@ const Orders: React.FC = () => {
                               onClick={() => setEditingOrderId(order.id)}
                               className="text-[8px] font-black text-red-600 uppercase flex items-center justify-center gap-1"
                             >
-                              <Edit3 size={10} /> Use alternative number
+                              <Edit3 size={10} /> Change Phone
                             </button>
                           )}
                           
@@ -251,7 +237,7 @@ const Orders: React.FC = () => {
                             className="bg-red-600 hover:bg-red-700 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-200 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                           >
                             {processingId === order.id ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />}
-                            Execute Payment
+                            Pay Now
                           </button>
                        </div>
                      )}
@@ -262,7 +248,7 @@ const Orders: React.FC = () => {
                   <div className="bg-slate-900 p-3 text-center flex items-center justify-center gap-2">
                     <Phone size={12} className="text-red-500" />
                     <p className="text-[9px] font-black text-white uppercase tracking-[0.2em]">
-                       Gateway Target: <span className="text-red-500">{customPhone || user?.phone || "Undefined"}</span>
+                       M-Pesa Target: <span className="text-red-500">{customPhone || user?.phone || "Not Set"}</span>
                     </p>
                   </div>
                 )}

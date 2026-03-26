@@ -1,5 +1,5 @@
 import { db } from "../../db/instance";
-import { menu, orders, orderDetails, customOrders } from "../../config/schema";
+import { menu, orders, orderDetails, customOrders, users } from "../../config/schema";
 import { inArray, eq, desc } from "drizzle-orm";
 
 // 1. VALIDATE AND CREATE (Standard Menu Orders)
@@ -19,16 +19,18 @@ export const validateAndCreateOrder = async (userId: number, cart: any[], takeaw
 
     dbItems.forEach(dbItem => {
       const cartItem = cart.find(c => c.id === dbItem.id);
-      const itemTotal = Number(cartItem.quantity) * Number(dbItem.price);
+      const itemQuantity = Number(cartItem.quantity);
+      const itemPrice = Number(dbItem.price);
+      const itemTotal = itemQuantity * itemPrice;
       total += itemTotal;
 
       detailsData.push({
         userId,
         menuId: dbItem.id,
         foodName: dbItem.foodName,
-        quantity: cartItem.quantity,
-        price: dbItem.price,
-        amount: itemTotal,
+        quantity: itemQuantity,
+        price: itemPrice, // SQLite 'real' takes numbers
+        amount: itemTotal, // SQLite 'real' takes numbers
       });
     });
 
@@ -38,7 +40,7 @@ export const validateAndCreateOrder = async (userId: number, cart: any[], takeaw
     const [newOrder] = await tx.insert(orders).values({
       id: orderId,
       userId,
-      amount: total,
+      amount: total, // Passing as number for SQLite 'real'
       takeawayLocation: takeawayLocation || "Main Canteen",
       paymentStatus: "pending",
       status: "placed"
@@ -51,16 +53,14 @@ export const validateAndCreateOrder = async (userId: number, cart: any[], takeaw
   });
 };
 
-// 2. LINK CHECKOUT ID (Used during STK Push Trigger)
+// 2. LINK CHECKOUT ID (Standardized for both tables)
 export const linkCheckoutID = async (orderId: string, checkoutID: string) => {
-  // If it's a Custom Order (starts with CUST-)
   if (orderId.startsWith("CUST-")) {
     return await db.update(customOrders)
       .set({ mpesaCheckoutRequestId: checkoutID })
       .where(eq(customOrders.id, orderId));
   }
   
-  // Otherwise, update standard Orders
   return await db.update(orders)
     .set({ mpesaCheckoutRequestId: checkoutID })
     .where(eq(orders.id, orderId));
@@ -68,11 +68,10 @@ export const linkCheckoutID = async (orderId: string, checkoutID: string) => {
 
 // 3. UPDATE STATUS (Used by M-Pesa Callback)
 export const updatePaymentStatus = async (checkoutID: string, status: "completed" | "failed" | "pending", receipt?: string) => {
-  // A. Try updating standard orders
+  // Try standard orders first
   const [standardUpdate] = await db.update(orders)
     .set({ 
       paymentStatus: status,
-      // Use logical AND to only include if receipt exists to avoid schema issues
       ...(receipt && { mpesaReceiptNumber: receipt }) 
     })
     .where(eq(orders.mpesaCheckoutRequestId, checkoutID))
@@ -80,13 +79,11 @@ export const updatePaymentStatus = async (checkoutID: string, status: "completed
 
   if (standardUpdate) return standardUpdate;
 
-  // B. Update Custom Orders
+  // Otherwise update custom orders
   const [customUpdate] = await db.update(customOrders)
     .set({ 
       paymentStatus: status,
-      // For custom orders, we move status to 'placed' (active) only if paid
       status: status === "completed" ? "placed" : "cancelled",
-      // IMPORTANT: Ensure customOrders table has this column in your schema.ts
       ...(receipt && { mpesaReceiptNumber: receipt }) 
     })
     .where(eq(customOrders.mpesaCheckoutRequestId, checkoutID))
@@ -95,7 +92,7 @@ export const updatePaymentStatus = async (checkoutID: string, status: "completed
   return customUpdate;
 };
 
-// 4. ADMIN: GET ALL PAYMENTS (Combined View)
+// 4. ADMIN: GET ALL PAYMENTS (Flattened & Sorted)
 export const getAllPaymentsService = async () => {
   const standardOrders = await db.query.orders.findMany({
     with: { user: { columns: { password: false } }, details: true },
@@ -108,16 +105,14 @@ export const getAllPaymentsService = async () => {
     orderBy: [desc(customOrders.createdAt)]
   });
 
-  // Merge and sort
   return [...standardOrders, ...customPaidOrders].sort((a, b) => {
-    // We use "0" (the Unix Epoch) as a fallback if createdAt is null
     const timeA = new Date(a.createdAt ?? 0).getTime();
     const timeB = new Date(b.createdAt ?? 0).getTime();
-    return timeB - timeA; // Descending order
+    return timeB - timeA;
   });
 };
 
-// 5. USER: GET MY HISTORY
+// 5. USER: GET MY HISTORY (Flat list for Frontend consistency)
 export const getUserPaymentsService = async (userId: number) => {
   const myOrders = await db.query.orders.findMany({
     where: eq(orders.userId, userId),
@@ -130,9 +125,15 @@ export const getUserPaymentsService = async (userId: number) => {
     orderBy: [desc(customOrders.createdAt)]
   });
 
-  return { orders: myOrders, customRequests: myCustomOrders };
+  // Flattening into one array so paymentSlice.ts doesn't crash
+  return [...myOrders, ...myCustomOrders].sort((a, b) => {
+    const timeA = new Date(a.createdAt ?? 0).getTime();
+    const timeB = new Date(b.createdAt ?? 0).getTime();
+    return timeB - timeA;
+  });
 };
 
+// 6. DELETE PAYMENT
 export const deletePaymentService = async (orderId: string) => {
   if (orderId.startsWith("CUST-")) {
     const res = await db.delete(customOrders).where(eq(customOrders.id, orderId)).returning();
@@ -140,4 +141,25 @@ export const deletePaymentService = async (orderId: string) => {
   }
   const result = await db.delete(orders).where(eq(orders.id, orderId)).returning();
   return result.length > 0;
+};
+
+// 7. USER LOOKUP (Resolves the 'User 4' 500 error)
+export const findUserById = async (userId: string | number) => {
+  const id = typeof userId === 'string' ? parseInt(userId) : userId;
+  
+  if (isNaN(id)) return null;
+
+  const result = await db.select({
+    id: users.id,
+    name: users.name,
+    email: users.email,
+    phone: users.phone, // Matches your 'phone' column in schema
+    registerNumber: users.registerNumber,
+    department: users.department
+  })
+  .from(users)
+  .where(eq(users.id, id))
+  .limit(1);
+
+  return result[0] || null;
 };

@@ -1,0 +1,1 @@
+ALTER TABLE `custom_orders` ADD `mpesa_receipt_number` text;

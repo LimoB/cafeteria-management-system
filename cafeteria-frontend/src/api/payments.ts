@@ -3,50 +3,41 @@ import { PaymentHistory, PaymentResponse, StkPushRequest } from '../types/paymen
 
 /**
  * Step 1: Create the initial order record in the database
- * Returns the order object with the generated ID
  */
 export const initializeOrder = async (cartData: any): Promise<any> => {
   const response = await api.post('/payments/order', cartData);
-  // Ensure we return the data property specifically
-  return response.data;
+  return response.data; // { success: true, orderId, total }
 };
 
 /**
  * Step 2: Trigger M-Pesa STK Push via Daraja API
- * Sends request to the user's phone for PIN entry
  */
 export const triggerStkPush = async (paymentData: StkPushRequest): Promise<PaymentResponse> => {
-  console.log("API: Triggering STK Push for Order", paymentData.orderId);
   const response = await api.post('/payments/stk-push', paymentData);
+  return response.data; // { success: true, mpesaResponse }
+};
+
+/**
+ * Admin: View all transactions
+ * Returns the full object containing the orders array
+ */
+export const getAllHistory = async (): Promise<{ success: boolean; orders: PaymentHistory[] }> => {
+  const response = await api.get('/payments/all');
+  return response.data; 
+};
+
+/**
+ * Student: View personal history
+ */
+export const getMyHistory = async (): Promise<{ success: boolean; orders: PaymentHistory[] }> => {
+  const response = await api.get('/payments/my-history');
   return response.data;
 };
 
 /**
- * Admin: View all canteen revenue and system-wide transactions
- * Returns an array of PaymentHistory objects
+ * User Lookup: Fix for the "User 4" 500 error
  */
-export const getAllHistory = async (): Promise<{ data: PaymentHistory[] }> => {
-  const response = await api.get('/payments/all');
-  
-  // LOG: Verify structure for debugging
-  console.log("API: Fetched Global History", response.data);
-
-  // If backend returns { data: [...] }, return that. If it returns just [...], wrap it.
-  const historyData = Array.isArray(response.data) ? response.data : (response.data.data || []);
-  return { data: historyData };
-};
-
-/**
- * Student: View personal payment history for their own account
- * Returns an array of PaymentHistory objects
- */
-export const getMyHistory = async (): Promise<{ data: PaymentHistory[] }> => {
-  const response = await api.get('/payments/my-history');
-  
-  // LOG: Verify structure for debugging
-  console.log("API: Fetched Personal History", response.data);
-
-  // Defensive check to ensure we always pass an array back to the Redux Thunk
-  const historyData = Array.isArray(response.data) ? response.data : (response.data.data || []);
-  return { data: historyData };
+export const getUserById = async (userId: string | number): Promise<any> => {
+  const response = await api.get(`/payments/users/${userId}`);
+  return response.data;
 };

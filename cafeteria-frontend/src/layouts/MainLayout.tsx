@@ -57,7 +57,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     }
   };
 
-  // --- DYNAMIC ROLE-BASED NAVIGATION ---
+// --- DYNAMIC ROLE-BASED NAVIGATION ---
   const navLinks = [
     { name: "Feed", href: "/", icon: Zap, public: true },
     { name: "Cafeteria", href: "/home", icon: Utensils, public: false },
@@ -65,12 +65,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       // STUDENT ONLY LINKS
       { name: "Requests", href: "/request-food", icon: MessageSquarePlus, public: false },
       { name: "Orders", href: "/my-orders", icon: History, public: false },
+      { name: "Payments", href: "/payment-history", icon: History, public: false }, // Added Payment History
     ] : [
-      // ADMIN ONLY LINKS (Order Queue removed as it is in Admin Dash)
+      // ADMIN ONLY LINKS
       { name: "Staff Terminal", href: "/admin/dashboard", icon: LayoutDashboard, public: false },
     ]),
   ];
-
+  
   return (
     <div className="min-h-screen flex flex-col bg-[#FAFAFB] font-sans text-slate-900 overflow-x-hidden">
       

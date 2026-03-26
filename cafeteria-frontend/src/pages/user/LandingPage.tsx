@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react'; // Added useEffect
 import { Link, useNavigate } from 'react-router-dom';
-import { useAppSelector } from '../../app/hooks'; 
+import { useAppSelector, useAppDispatch } from '../../app/hooks'; // Added useAppDispatch
+import { fetchMenu } from '../../app/slices/menuSlice'; // Added fetchMenu import
 import { ArrowRight, Zap, Clock, ShieldCheck, ShoppingBag, Sparkles, MapPin } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
 
@@ -10,12 +11,22 @@ import ProductShowcase from '../../components/ProductShowcase';
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch(); // Initialized dispatch
   
   // 1. Get auth state and menu items from Redux
   const { user, role } = useAppSelector((state) => state.auth);
   const { items: menuItems } = useAppSelector((state) => state.menu);
 
   const isAdmin = role === 'admin';
+
+  // --- BOOTSTRAP DATA ON MOUNT ---
+  // This ensures that when a guest or user hits the landing page, 
+  // the menu items are actually fetched from the server.
+  useEffect(() => {
+    if (menuItems.length === 0) {
+      dispatch(fetchMenu());
+    }
+  }, [dispatch, menuItems.length]);
 
   // 2. Prepare a "Featured" list for the landing page (first 4 items)
   const featuredProducts = useMemo(() => {
@@ -31,7 +42,6 @@ const LandingPage: React.FC = () => {
 
   return (
     <div className="bg-[#fcfcfd] font-sans selection:bg-red-100 overflow-x-hidden">
-      {/* Toast notifications container */}
       <Toaster position="top-center" reverseOrder={false} />
 
       {/* --- 1. MODERN HERO SECTION --- */}
@@ -64,7 +74,7 @@ const LandingPage: React.FC = () => {
 
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
               <Link 
-                to={user ? "/home" : "/auth/login"} 
+                to={user ? (isAdmin ? "/admin/dashboard" : "/home") : "/auth/login"} 
                 className={`group relative w-full sm:w-auto flex items-center justify-center px-10 py-5 text-white text-sm font-black uppercase tracking-widest rounded-2xl shadow-2xl transition-all active:scale-95 ${isAdmin ? 'bg-slate-900 hover:bg-black shadow-slate-200' : 'bg-black hover:bg-red-600 shadow-gray-300'}`}
               >
                 {isAdmin ? <ShieldCheck className="mr-3 h-5 w-5" /> : <ShoppingBag className="mr-3 h-5 w-5" />}
@@ -159,7 +169,13 @@ const LandingPage: React.FC = () => {
         
         {/* Pass the featured items to the showcase */}
         <ProductShowcase 
-          onOrderNowClick={() => navigate(user ? '/home' : '/auth/login')} 
+          onOrderNowClick={() => {
+            if (!user) {
+              navigate('/auth/login');
+            } else {
+              navigate('/home');
+            }
+          }} 
           filteredItems={featuredProducts} 
         />
       </section>

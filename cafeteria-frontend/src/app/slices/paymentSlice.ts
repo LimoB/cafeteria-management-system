@@ -31,35 +31,22 @@ export const fetchPaymentHistory = createAsyncThunk(
   'payments/fetchHistory',
   async (isAdmin: boolean, thunkAPI) => {
     try {
-      const response: any = isAdmin 
+      // 1. Call the appropriate API
+      const response = isAdmin 
         ? await paymentApi.getAllHistory() 
         : await paymentApi.getMyHistory();
       
-      console.log("DEBUG: Raw API Response Received", response);
+      // 2. Extract the 'orders' array we defined in the backend controller
+      // The backend now sends: { success: true, orders: [...] }
+      const ordersArray = response.orders || [];
 
-      /**
-       * LOGIC UPDATE:
-       * Your log shows: { success: true, data: { orders: [...], customRequests: [...] } }
-       * We need to extract the 'orders' array specifically.
-       */
-      let ordersArray = [];
-
-      if (response?.data?.orders) {
-        ordersArray = response.data.orders;
-      } else if (response?.orders) {
-        ordersArray = response.orders;
-      } else if (Array.isArray(response.data)) {
-        ordersArray = response.data;
-      } else if (Array.isArray(response)) {
-        ordersArray = response;
-      }
-
-      console.log("DEBUG: Extracted Orders Array", ordersArray);
       return ordersArray as PaymentHistory[];
       
     } catch (error: any) {
-      console.error("DEBUG: Fetch History Thunk Error", error);
-      return thunkAPI.rejectWithValue(error.response?.data?.message || "Could not load history");
+      console.error("Redux Fetch Error:", error);
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Could not load history"
+      );
     }
   }
 );
@@ -76,12 +63,6 @@ export const paymentSlice = createSlice({
       state.message = '';
     },
     updateLocalPaymentStatus: (state, action: PayloadAction<{orderId: string, status: PaymentHistory['paymentStatus']}>) => {
-      if (!Array.isArray(state.history)) {
-        console.warn("REDUX: History state was not an array. Resetting.");
-        state.history = [];
-        return;
-      }
-
       const index = state.history.findIndex(h => h.id === action.payload.orderId);
       if (index !== -1) {
         state.history[index].paymentStatus = action.payload.status;
@@ -90,6 +71,7 @@ export const paymentSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      // STK Push Handlers
       .addCase(initiateMpesaPayment.pending, (state) => {
         state.isProcessing = true;
         state.isError = false;
@@ -98,11 +80,9 @@ export const paymentSlice = createSlice({
         state.isProcessing = false;
         state.message = "STK Push sent. Check your phone to enter PIN.";
         
-        if (Array.isArray(state.history)) {
-          const index = state.history.findIndex(h => h.id === action.payload.orderId);
-          if (index !== -1) {
-            state.history[index].paymentStatus = "pending";
-          }
+        const index = state.history.findIndex(h => h.id === action.payload.orderId);
+        if (index !== -1) {
+          state.history[index].paymentStatus = "pending";
         }
       })
       .addCase(initiateMpesaPayment.rejected, (state, action) => {
@@ -111,24 +91,20 @@ export const paymentSlice = createSlice({
         state.message = action.payload as string;
       })
       
+      // History Fetch Handlers
       .addCase(fetchPaymentHistory.pending, (state) => {
         state.isProcessing = true;
       })
       .addCase(fetchPaymentHistory.fulfilled, (state, action: PayloadAction<PaymentHistory[]>) => {
         state.isProcessing = false;
-        // The Thunk now guarantees an array, but we check again for safety
-        if (Array.isArray(action.payload)) {
-          state.history = action.payload;
-        } else {
-          console.error("REDUX: Payload is still not an array", action.payload);
-          state.history = [];
-        }
+        state.history = action.payload; // Guaranteed to be an array by the thunk
+        state.isError = false;
       })
       .addCase(fetchPaymentHistory.rejected, (state, action) => {
         state.isProcessing = false;
         state.isError = true;
         state.message = action.payload as string;
-        if (!Array.isArray(state.history)) state.history = [];
+        state.history = []; // Reset on error to prevent mapping over undefined
       });
   },
 });

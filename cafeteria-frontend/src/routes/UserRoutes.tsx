@@ -6,6 +6,8 @@ import Home from '../pages/user/Home';
 import LandingPage from '../pages/user/LandingPage';
 import Cart from '../pages/user/cart/Cart';
 import Orders from '../pages/user/orders/Orders';
+// Import the new Payment History component
+import PaymentHistory from '../pages/user/orders/PaymentHistory'; 
 import Profile from '../pages/user/profile/Profile';
 import RequestFood from '../pages/user/custom-requests/RequestFood';
 
@@ -16,11 +18,14 @@ const UserRoutes = () => {
       <Route path="/" element={<LandingPage />} />
       
       {/* --- Protected Student Routes --- */}
-      {/* Both Users and Admins can access these 'student-side' features */}
       <Route element={<ProtectedRoute allowedRoles={['user', 'admin']} />}>
         <Route path="/home" element={<Home />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/my-orders" element={<Orders />} />
+        
+        {/* --- Added Payment History Route --- */}
+        <Route path="/payment-history" element={<PaymentHistory />} />
+        
         <Route path="/profile" element={<Profile />} />
         
         {/* Custom Order / Specialized Requests */}

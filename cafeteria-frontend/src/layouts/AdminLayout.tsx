@@ -3,7 +3,8 @@ import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, UtensilsCrossed, ClipboardList, 
   Users, LogOut, Menu as MenuIcon, ChefHat, 
-  Zap, Clock, ShieldCheck, Globe
+  Zap, Clock, ShieldCheck, Globe,
+  Receipt
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { logout } from "../app/slices/authSlice";
@@ -29,6 +30,7 @@ const AdminLayout: React.FC = () => {
     { name: "Live Queue", href: "/admin/orders", icon: ClipboardList },
     { name: "Specials", href: "/admin/custom-orders", icon: ChefHat },
     { name: "Directory", href: "/admin/users", icon: Users },
+    { name: "Payments", href: "/admin/payments", icon: Receipt }
   ];
 
   const handleLogout = async () => {
@@ -102,7 +104,7 @@ const AdminLayout: React.FC = () => {
               to="/home" 
               className="flex items-center justify-center gap-3 w-full py-4 rounded-2xl bg-white/50 border border-slate-200 text-slate-500 font-black text-[10px] uppercase tracking-widest hover:border-orange-500 hover:text-orange-600 transition-all shadow-sm"
             >
-              <Globe size={14} /> Portal Preview
+              <Globe size={14} /> Users Portal Preview
             </Link>
 
             <button
