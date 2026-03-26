@@ -52,17 +52,18 @@ export const triggerStkPush = async (req: AuthenticatedRequest, res: Response, n
     const passKey = process.env.MPESA_PASSKEY;
     const password = Buffer.from(`${shortCode}${passKey}${timestamp}`).toString("base64");
 
-    const payload = {
+   const payload = {
       BusinessShortCode: shortCode,
       Password: password,
       Timestamp: timestamp,
-      TransactionType: "CustomerPayBillOnline", // For Paybill
+      TransactionType: "CustomerPayBillOnline", 
       Amount: Math.round(Number(amount)), 
       PartyA: cleanPhone, 
       PartyB: shortCode,
       PhoneNumber: cleanPhone,
       CallBackURL: process.env.MPESA_CALLBACK_URL,
-      AccountReference: orderId.substring(0, 12), // Max 12 chars
+      // SLICE the ID to ensure it never exceeds 12 chars
+      AccountReference: orderId.replace("-", "").substring(0, 12), 
       TransactionDesc: "Canteen Payment",
     };
 
@@ -89,6 +90,9 @@ export const triggerStkPush = async (req: AuthenticatedRequest, res: Response, n
   }
 };
 
+
+// No changes needed to triggerStkPush – just ensure you pass the customOrderId as 'orderId'
+
 export const mpesaCallback = async (req: any, res: Response) => {
   try {
     console.log("--- RECEIVED MPESA CALLBACK ---", JSON.stringify(req.body));
@@ -98,9 +102,11 @@ export const mpesaCallback = async (req: any, res: Response) => {
     if (stkCallback.ResultCode === 0) {
       const metadata = stkCallback.CallbackMetadata.Item;
       const receipt = metadata.find((i: any) => i.Name === "MpesaReceiptNumber")?.Value;
+      
+      // NEW: This service function now checks both tables
       await PaymentService.updatePaymentStatus(checkoutID, "completed", receipt);
     } else {
-      console.warn(`Payment failed for CheckoutID: ${checkoutID}. Reason: ${stkCallback.ResultDesc}`);
+      console.warn(`Payment failed for CheckoutID: ${checkoutID}.`);
       await PaymentService.updatePaymentStatus(checkoutID, "failed");
     }
     res.status(200).send("OK");

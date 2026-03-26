@@ -18,9 +18,11 @@ const Orders: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   
-  const { orders, isLoading: ordersLoading } = useAppSelector((state) => state.orders);
+  const { orders = [], isLoading: ordersLoading } = useAppSelector((state) => state.orders);
   const { role, user: authUser } = useAppSelector((state) => state.auth);
   const { selectedUser } = useAppSelector((state) => state.users);
+  // Accessing history with a fallback to prevent .findIndex or .some errors
+  const { history = [] } = useAppSelector((state) => state.payments);
   
   const user = (selectedUser || authUser) as UserProfile | null;
   
@@ -31,6 +33,7 @@ const Orders: React.FC = () => {
   const isAdmin = role === 'admin';
 
   useEffect(() => {
+    console.log("LOG: Initializing Orders Data Fetch");
     dispatch(fetchAllOrders(isAdmin));
     dispatch(fetchPaymentHistory(isAdmin));
     if (authUser?.id && !selectedUser) {
@@ -38,14 +41,26 @@ const Orders: React.FC = () => {
     }
   }, [dispatch, isAdmin, authUser?.id, selectedUser]);
 
+  useEffect(() => {
+    console.log("LOG: Payment History Updated", history);
+    if (!Array.isArray(history)) {
+      console.error("CRITICAL: Payment history is not an array!", history);
+    }
+  }, [history]);
+
   const refreshData = () => {
+    console.log("LOG: Manual Refresh Triggered");
     dispatch(fetchAllOrders(isAdmin));
   };
 
   const handlePayment = async (orderId: string, amount: number) => {
     const targetPhone = customPhone || user?.phone;
 
+    console.log(`LOG: Initiating M-Pesa Payment for Order ${orderId}`);
+    console.log(`LOG: Target Amount: ${amount}, Target Phone: ${targetPhone}`);
+
     if (!targetPhone || targetPhone.trim() === '') {
+      console.warn("WARN: Payment blocked - No phone number available");
       toast.error("Phone number missing! Redirecting to profile...");
       setTimeout(() => navigate('/profile'), 2000);
       return;
@@ -53,15 +68,18 @@ const Orders: React.FC = () => {
 
     setProcessingId(orderId);
     try {
-      await dispatch(initiateMpesaPayment({
+      const cleanPhone = targetPhone.replace(/\s/g, '');
+      const result = await dispatch(initiateMpesaPayment({
           orderId, 
           amount,
-          phoneNumber: targetPhone.replace(/\s/g, '') 
+          phoneNumber: cleanPhone
       })).unwrap();
       
+      console.log("LOG: STK Push Dispatch Success", result);
       toast.success(`STK Push sent to ${targetPhone}`);
       setEditingOrderId(null);
     } catch (error: any) {
+      console.error("ERROR: M-Pesa Initiation Failed", error);
       toast.error(error?.message || "Payment failed");
     } finally {
       setProcessingId(null);
@@ -79,14 +97,14 @@ const Orders: React.FC = () => {
     }
   };
 
-  if (ordersLoading && orders.length === 0) {
+  if (ordersLoading && (!orders || orders.length === 0)) {
     return (
       <div className="flex flex-col justify-center items-center min-h-[60vh] gap-4">
         <div className="relative">
           <RefreshCw className="animate-spin text-red-600" size={48} />
           <div className="absolute inset-0 bg-red-600/10 blur-xl rounded-full" />
         </div>
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">Syncing your meals...</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">Syncing System Data</p>
       </div>
     );
   }
@@ -103,19 +121,18 @@ const Orders: React.FC = () => {
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-red-600">
                 {isAdmin ? 'Management Console' : 'Digital Receipts'}
               </span>
-              {/* Added Linked Number Badge */}
               {!isAdmin && user?.phone && (
                 <div className="flex items-center gap-1 mt-0.5">
                   <div className="w-1 h-1 rounded-full bg-green-500" />
                   <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">
-                    Linked: {user.phone}
+                    Link Established: {user.phone}
                   </span>
                 </div>
               )}
             </div>
           </div>
           <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter text-gray-900 leading-none">
-            {isAdmin ? 'All' : 'My'} <span className="text-red-600 underline decoration-gray-100">Orders</span>
+            {isAdmin ? 'Global' : 'My'} <span className="text-red-600 underline decoration-gray-100">Orders</span>
           </h1>
         </div>
         
@@ -124,18 +141,18 @@ const Orders: React.FC = () => {
           disabled={ordersLoading}
           className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-all text-[10px] font-black uppercase tracking-widest text-gray-600 active:scale-95 disabled:opacity-50"
         >
-          <RefreshCw size={14} className={ordersLoading ? "animate-spin" : ""} /> Refresh Status
+          <RefreshCw size={14} className={ordersLoading ? "animate-spin" : ""} /> Update Ledger
         </button>
       </header>
 
-      {orders.length === 0 ? (
+      {(!orders || orders.length === 0) ? (
         <div className="bg-white border border-gray-100 rounded-[3rem] p-16 text-center shadow-sm">
           <div className="bg-gray-50 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
             <Utensils size={40} className="text-gray-200" />
           </div>
-          <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">No orders yet</h2>
-          <p className="text-gray-400 mt-2 mb-8 font-medium italic">Your stomach is waiting for an adventure.</p>
-          <Button onClick={() => navigate('/home')} className="rounded-2xl px-8">Browse Menu</Button>
+          <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">No active records</h2>
+          <p className="text-gray-400 mt-2 mb-8 font-medium italic">The order history is currently empty.</p>
+          <Button onClick={() => navigate('/home')} className="rounded-2xl px-8">View Menu</Button>
         </div>
       ) : (
         <div className="grid gap-8">
@@ -157,14 +174,14 @@ const Orders: React.FC = () => {
                         <div className={`h-1.5 w-1.5 rounded-full ${statusCfg.dot} animate-pulse`} />
                         <span className="text-[10px] font-black uppercase tracking-widest">{statusCfg.label}</span>
                       </div>
-                      <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">#{order.id.toUpperCase()}</span>
+                      <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">UID: {order.id.slice(0, 8).toUpperCase()}</span>
                     </div>
                     
                     <div>
                       <h3 className="text-xl md:text-2xl font-black text-gray-900 uppercase tracking-tight">
                         {order.details && order.details.length > 0 
-                          ? `${order.details[0].foodName}${order.details.length > 1 ? ` + ${order.details.length - 1} more` : ''}` 
-                          : 'Campus Meal'}
+                          ? `${order.details[0].foodName}${order.details.length > 1 ? ` + ${order.details.length - 1} Item(s)` : ''}` 
+                          : 'Standard Meal'}
                       </h3>
                       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
                         <span className="flex items-center gap-2"><Clock size={14} className="text-red-600" /> {formatDate(order.createdAt)}</span>
@@ -175,23 +192,22 @@ const Orders: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* RESTORED: Collection Code Section */}
                   <div className="lg:w-48 bg-slate-900 rounded-[2rem] p-6 text-center shadow-xl shadow-slate-200 relative overflow-hidden group-hover:scale-105 transition-transform">
                     <div className="absolute top-1/2 -left-2 w-4 h-4 bg-white rounded-full -translate-y-1/2" />
                     <div className="absolute top-1/2 -right-2 w-4 h-4 bg-white rounded-full -translate-y-1/2" />
                     
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">Collection Code</p>
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">Security Token</p>
                     <span className={`text-3xl font-black tracking-tighter ${isPaid ? 'text-white' : 'text-slate-700 opacity-50'}`}>
-                      {isPaid ? order.id.split('-').pop()?.toUpperCase() : '••••'}
+                      {isPaid ? order.id.split('-').pop()?.toUpperCase() : '----'}
                     </span>
                     <div className="mt-3 flex items-center justify-center gap-1.5">
                        {isPaid ? (
                          <div className="flex items-center gap-1 text-[8px] font-bold text-green-400 uppercase">
-                           <ShieldCheck size={10} /> Validated
+                           <ShieldCheck size={10} /> Verified
                          </div>
                        ) : (
                          <div className="flex items-center gap-1 text-[8px] font-bold text-red-500 uppercase">
-                           <AlertCircle size={10} /> Awaiting Pay
+                           <AlertCircle size={10} /> Pending
                          </div>
                        )}
                     </div>
@@ -199,7 +215,7 @@ const Orders: React.FC = () => {
 
                   <div className="flex flex-row lg:flex-col items-center justify-between lg:justify-center gap-6 lg:min-w-[200px] border-t lg:border-t-0 lg:border-l border-gray-100 pt-6 lg:pt-0 lg:pl-8">
                      <div className="text-left lg:text-center">
-                        <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">Total Bill</p>
+                        <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">Total Due</p>
                         <p className="text-2xl font-black text-gray-900">{formatCurrency(order.amount)}</p>
                      </div>
 
@@ -225,7 +241,7 @@ const Orders: React.FC = () => {
                               onClick={() => setEditingOrderId(order.id)}
                               className="text-[8px] font-black text-red-600 uppercase flex items-center justify-center gap-1"
                             >
-                              <Edit3 size={10} /> Pay with other number
+                              <Edit3 size={10} /> Use alternative number
                             </button>
                           )}
                           
@@ -235,7 +251,7 @@ const Orders: React.FC = () => {
                             className="bg-red-600 hover:bg-red-700 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-200 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                           >
                             {processingId === order.id ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />}
-                            Pay Now
+                            Execute Payment
                           </button>
                        </div>
                      )}
@@ -246,7 +262,7 @@ const Orders: React.FC = () => {
                   <div className="bg-slate-900 p-3 text-center flex items-center justify-center gap-2">
                     <Phone size={12} className="text-red-500" />
                     <p className="text-[9px] font-black text-white uppercase tracking-[0.2em]">
-                       STK Push targeting: <span className="text-red-500">{customPhone || user?.phone || "None"}</span>
+                       Gateway Target: <span className="text-red-500">{customPhone || user?.phone || "Undefined"}</span>
                     </p>
                   </div>
                 )}

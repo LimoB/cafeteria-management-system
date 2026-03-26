@@ -39,7 +39,7 @@ export const menu = sqliteTable('menu', {
   foodName: text('food_name').notNull(),
   price: real('price').notNull(),
   isAvailable: integer('is_available', { mode: 'boolean' }).notNull().default(true),
-  category: text('category').default('general'), // e.g., "Breakfast", "Lunch"
+  category: text('category').default('general'), 
   imageUrl: text('image_url'),
   imagePublicId: text('image_public_id'),
 });
@@ -53,14 +53,12 @@ export const orders = sqliteTable('orders', {
   id: text('id').primaryKey(), 
   userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
   amount: real('amount').notNull(),
-  
-  // Refined Statuses
   status: text('status', { enum: OrderStatus }).notNull().default('placed'),
   paymentStatus: text('payment_status', { enum: PaymentStatus }).notNull().default('pending'),
-  
   takeawayLocation: text('takeaway_location').notNull(),
   mpesaMerchantRequestId: text('merchant_request_id'),
   mpesaCheckoutRequestId: text('checkout_request_id'),
+  mpesaReceiptNumber: text("mpesa_receipt_number"),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 });
 
@@ -80,11 +78,20 @@ export const customOrders = sqliteTable('custom_orders', {
   userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
   description: text('description').notNull(),
   
+  // New: Price field for Admin to set after review
+  price: real('price').default(0),
+  
   // Status Enums
   status: text('status', { enum: OrderStatus }).notNull().default('placed'),
   approvalStatus: text('approval_status', { enum: ApprovalStatus }).notNull().default('pending'),
+  paymentStatus: text('payment_status', { enum: PaymentStatus }).notNull().default('pending'),
   
   takeawayLocation: text('takeaway_location').notNull(),
+  
+  // M-Pesa Tracking for Custom Orders
+  mpesaMerchantRequestId: text('merchant_request_id'),
+  mpesaCheckoutRequestId: text('checkout_request_id'),
+  
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 });
 
@@ -125,10 +132,6 @@ export const orderDetailRelations = relations(orderDetails, ({ one }) => ({
 export const menuRelations = relations(menu, ({ many }) => ({
   orderDetails: many(orderDetails),
 }));
-
-/* ================================
-   NEW: CUSTOM ORDER RELATIONS
-================================== */
 
 export const customOrderRelations = relations(customOrders, ({ one }) => ({
   user: one(users, {

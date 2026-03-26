@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 
 // Define the payload structure
 interface JWTPayload {
+  phone: any;
   id: number;
   username: string;
   role: 'user' | 'admin';

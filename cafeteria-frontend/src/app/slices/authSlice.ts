@@ -1,6 +1,8 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import * as authApi from '../../api/auth';
 import { AuthState, LoginCredentials, AuthResponse, UserRole } from '../../types/auth.types';
+// IMPORT the updateProfile thunk from your userSlice
+import { updateProfile } from './userSlice'; 
 
 // Helper to safely get data from localStorage on initialization
 const getStoredData = (key: string) => {
@@ -46,17 +48,12 @@ export const login = createAsyncThunk(
   }
 );
 
-/**
- * Removed 'thunkAPI' to fix ts(6133) since we don't 
- * need to return a rejected value for a logout operation.
- */
 export const logout = createAsyncThunk('auth/logout', async () => {
   try {
     await authApi.logoutUser();
   } catch (error) {
     console.warn("Server-side logout failed, clearing local session anyway.", error);
   } finally {
-    // Clear all persistence
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     localStorage.removeItem('role');
@@ -104,6 +101,15 @@ export const authSlice = createSlice({
         state.isLoading = false;
         state.isError = false;
         state.message = '';
+      })
+      // --- THE FIX: SYNC WITH USER PROFILE UPDATES ---
+      .addCase(updateProfile.fulfilled, (state, action: PayloadAction<any>) => {
+        // If the updated user is the currently logged-in user, sync the data
+        if (state.user && state.user.id === action.payload.id) {
+          state.user = { ...state.user, ...action.payload };
+          // Also update localStorage so a page refresh doesn't revert the phone number
+          localStorage.setItem('user', JSON.stringify(state.user));
+        }
       });
   },
 });

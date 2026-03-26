@@ -6,27 +6,37 @@ import pc from 'picocolors';
 async function seed() {
   const line = pc.gray("─".repeat(60));
   console.log(line);
-  console.log(pc.green(pc.bold("🌱 LAIKIPIA CANTEEN DATABASE SEEDER (RESTORE MODE)")));
+  console.log(pc.green(pc.bold("🌱 LAIKIPIA CANTEEN DATABASE SEEDER (V2 - ENHANCED)")));
+  console.log(pc.white("Synchronizing Menu, Users, and System Locations..."));
   console.log(line);
 
   try {
     const saltRounds = 12;
-
-    // 🔐 ADMINS
-    console.log(pc.cyan("🔐 Seeding Admins..."));
+    const commonPass = await bcrypt.hash("student123", saltRounds);
     const adminPass = await bcrypt.hash("admin123", saltRounds);
 
+    // 🔐 ADMINS (System Controllers)
+    console.log(pc.cyan("🔐 Seeding Administrative Core..."));
     await db.insert(admins).values([
+      { name: "Boaz Kipchirchir", username: "boaz_dev", password: adminPass },
       { name: "Alice Wanjiku", username: "admin_alice", password: adminPass },
-      { name: "James Otieno", username: "manager_james", password: adminPass },
-      { name: "Boaz Kipchirchir", username: "boaz_dev", password: adminPass }
-    ]).onConflictDoNothing(); // <--- This prevents the crash if users exist
+      { name: "James Otieno", username: "manager_james", password: adminPass }
+    ]).onConflictDoNothing();
 
-    // 🎓 USERS (Expanded Student List)
-    console.log(pc.cyan("🎓 Seeding Students..."));
-    const userPass = await bcrypt.hash("student123", saltRounds);
-
+    // 🎓 USERS (Student Body)
+    console.log(pc.cyan("🎓 Seeding Student Registry..."));
     await db.insert(users).values([
+      {
+        name: "Kevin Koech",
+        email: "kevin@student.lu.ac.ke",
+        phone: "254700112233",
+        registerNumber: "S11/00551/24",
+        department: "Computer Science",
+        username: "kevo_cs",
+        graduationYear: 2028,
+        password: commonPass,
+        avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Kevin"
+      },
       {
         name: "Brian Mwangi",
         email: "brian@student.lu.ac.ke",
@@ -35,7 +45,7 @@ async function seed() {
         department: "Information Technology",
         username: "brian_it",
         graduationYear: 2027,
-        password: userPass,
+        password: commonPass,
         avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Brian"
       },
       {
@@ -46,19 +56,8 @@ async function seed() {
         department: "Business Administration",
         username: "faith_biz",
         graduationYear: 2026,
-        password: userPass,
+        password: commonPass,
         avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Faith"
-      },
-      {
-        name: "Kevin Koech",
-        email: "kevin@student.lu.ac.ke",
-        phone: "254700112233",
-        registerNumber: "S11/00551/24",
-        department: "Computer Science",
-        username: "kevo_cs",
-        graduationYear: 2028,
-        password: userPass,
-        avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Kevin"
       },
       {
         name: "Stacy Chebet",
@@ -68,60 +67,58 @@ async function seed() {
         department: "Nursing",
         username: "stacy_che",
         graduationYear: 2027,
-        password: userPass,
+        password: commonPass,
         avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Stacy"
-      },
-      {
-        name: "Dennis Omari",
-        email: "dennis@student.lu.ac.ke",
-        phone: "254755667788",
-        registerNumber: "A11/00122/22",
-        department: "Education",
-        username: "denno_omari",
-        graduationYear: 2026,
-        password: userPass,
-        avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Dennis"
       }
     ]).onConflictDoNothing();
 
-    // 📍 LOCATIONS
-    console.log(pc.cyan("📍 Seeding Locations..."));
+    // 📍 LOCATIONS (Pickup Windows)
+    console.log(pc.cyan("📍 Seeding Delivery Points..."));
     await db.insert(locations).values([
       { name: "Main Canteen - Window A" },
       { name: "Main Canteen - Window B" },
       { name: "Science Complex Juice Bar" },
+      { name: "Hostel Block C Pickup" },
       { name: "LKC Staff Lounge" }
     ]).onConflictDoNothing();
 
-    // 🍱 MENU
-    console.log(pc.cyan("🍱 Seeding Menu & Combos..."));
-    await db.insert(menu).values([
-      { foodName: "Ugali + Sukuma + Beef", price: 180, isAvailable: true, category: "Combo" },
-      { foodName: "Rice + Beans + Cabbage", price: 120, isAvailable: true, category: "Combo" },
-      { foodName: "Chapati (2) + Ndengu", price: 90, isAvailable: true, category: "Combo" },
-      { foodName: "Chips + Sausage (2)", price: 180, isAvailable: true, category: "Combo" },
-      { foodName: "Githeri + Avocado", price: 80, isAvailable: true, category: "Combo" },
-      { foodName: "Mukimo + Beef Stew", price: 170, isAvailable: true, category: "Combo" },
-      { foodName: "Pilau + Kachumbari + Soda", price: 200, isAvailable: true, category: "Combo" },
-      { foodName: "Tea", price: 20, isAvailable: true, category: "Breakfast" },
-      { foodName: "Mandazi", price: 15, isAvailable: true, category: "Breakfast" },
-      { foodName: "Chapati", price: 20, isAvailable: true, category: "Breakfast" },
-      { foodName: "Boiled Eggs", price: 20, isAvailable: true, category: "Breakfast" },
-      { foodName: "Ugali", price: 30, isAvailable: true, category: "Lunch" },
-      { foodName: "Rice", price: 50, isAvailable: true, category: "Lunch" },
-      { foodName: "Beef Stew", price: 120, isAvailable: true, category: "Lunch" },
-      { foodName: "Beans", price: 70, isAvailable: true, category: "Lunch" },
-      { foodName: "Chips", price: 100, isAvailable: true, category: "Snacks" },
-      { foodName: "Soda 300ml", price: 60, isAvailable: true, category: "Drinks" }
-    ]).onConflictDoNothing();
+    // 🍱 MENU (With Price Update Logic)
+    console.log(pc.cyan("🍱 Syncing Menu & Pricing..."));
+    const menuItems = [
+      { foodName: "Ugali + Sukuma + Beef", price: 180, category: "Combo" },
+      { foodName: "Rice + Beans + Cabbage", price: 120, category: "Combo" },
+      { foodName: "Chapati (2) + Ndengu", price: 90, category: "Combo" },
+      { foodName: "Chips + Sausage (2)", price: 180, category: "Combo" },
+      { foodName: "Pilau + Kachumbari + Soda", price: 220, category: "Combo" },
+      { foodName: "Mukimo + Beef Stew", price: 170, category: "Combo" },
+      { foodName: "Githeri + Avocado", price: 85, category: "Combo" },
+      { foodName: "Tea (Large)", price: 25, category: "Breakfast" },
+      { foodName: "Mandazi (Pair)", price: 30, category: "Breakfast" },
+      { foodName: "Boiled Eggs", price: 25, category: "Breakfast" },
+      { foodName: "Beef Stew (Side)", price: 120, category: "Lunch" },
+      { foodName: "Chicken Wet Fry", price: 250, category: "Lunch" },
+      { foodName: "Chips (Large)", price: 120, category: "Snacks" },
+      { foodName: "Soda 500ml", price: 80, category: "Drinks" },
+      { foodName: "Fresh Juice (Science Bar)", price: 100, category: "Drinks" }
+    ];
+
+    for (const item of menuItems) {
+      await db.insert(menu).values({
+        ...item,
+        isAvailable: true,
+      }).onConflictDoUpdate({
+        target: menu.id, // Only works if you have IDs mapped, otherwise use foodName if it's unique
+        set: { price: item.price, category: item.category }
+      });
+    }
 
     console.log(line);
-    console.log(pc.green(pc.bold("✅ SEED COMPLETE (CLEAN RUN)")));
-    console.log(pc.white(`Access: ${pc.yellow("boaz_dev")} | ${pc.yellow("kevo_cs")}`));
+    console.log(pc.green(pc.bold("✅ SEEDING PROTOCOL COMPLETE")));
+    console.log(pc.white(`System Ready. Developer: ${pc.yellow("boaz_dev")}`));
     console.log(line);
 
   } catch (error) {
-    console.error(pc.red("❌ Seeding failed:"), error);
+    console.error(pc.red("❌ Critical Seeding Error:"), error);
   } finally {
     process.exit(0);
   }

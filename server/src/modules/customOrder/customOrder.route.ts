@@ -1,6 +1,6 @@
 import { Router } from "express";
 import * as CustomOrderController from "./customOrder.controller";
-import { userAuth, adminAuth } from "../../middleware/auth.middleware";
+import { userAuth } from "../../middleware/auth.middleware";
 
 const customOrderRouter: Router = Router();
 
@@ -8,16 +8,22 @@ const customOrderRouter: Router = Router();
  * PATH: /api/custom-orders
  */
 
-// Admin: View all custom requests
-customOrderRouter.get("/", adminAuth, CustomOrderController.getCustomOrders);
+// Fetch all (Admin) or personal (Student)
+customOrderRouter.get("/", userAuth, CustomOrderController.getCustomOrders);
 
-// User: Submit a new special request
+// Submit a new special request
 customOrderRouter.post("/", userAuth, CustomOrderController.createCustomOrder);
 
-// User/Admin: Update status or details
+/**
+ * NEW: Pay for a quoted custom order
+ * Triggered when a student clicks the "Pay Now" button in their log
+ */
+customOrderRouter.post("/:id/pay", userAuth, CustomOrderController.payCustomOrder);
+
+// Update status or details
 customOrderRouter.patch("/:id", userAuth, CustomOrderController.updateCustomOrder);
 
-// User/Admin: Cancel or remove request
+// Cancel or remove request
 customOrderRouter.delete("/:id", userAuth, CustomOrderController.deleteCustomOrder);
 
 export default customOrderRouter;

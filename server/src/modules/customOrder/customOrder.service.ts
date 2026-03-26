@@ -5,6 +5,10 @@ import { InferInsertModel } from "drizzle-orm";
 
 type NewCustomOrder = InferInsertModel<typeof customOrders>;
 
+/**
+ * FETCH SERVICES
+ */
+
 // Fetch all custom orders (Admin view) with user details
 export const getAllCustomOrdersService = async () => {
   return await db.query.customOrders.findMany({
@@ -17,7 +21,7 @@ export const getAllCustomOrdersService = async () => {
   });
 };
 
-// Fetch specific user's custom orders
+// Fetch specific user's custom orders (Student view)
 export const getCustomOrdersByUserService = async (userId: number) => {
   return await db.query.customOrders.findMany({
     where: eq(customOrders.userId, userId),
@@ -25,13 +29,24 @@ export const getCustomOrdersByUserService = async (userId: number) => {
   });
 };
 
+// Helper for ownership checks (used in Update/Delete controllers)
+export const getCustomOrderById = async (id: string) => {
+  return await db.query.customOrders.findFirst({
+    where: eq(customOrders.id, id),
+  });
+};
+
+/**
+ * ACTION SERVICES
+ */
+
 // Create a custom request
 export const createCustomOrderService = async (data: NewCustomOrder) => {
   const [result] = await db.insert(customOrders).values(data).returning();
   return result;
 };
 
-// Update order (Admin can change status/approvalStatus)
+// Update order (Admin updates status, User updates details)
 export const updateCustomOrderService = async (id: string, data: Partial<NewCustomOrder>) => {
   const [result] = await db
     .update(customOrders)

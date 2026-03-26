@@ -11,6 +11,7 @@ export interface UserProfile {
   role: 'user' | 'admin';
   avatarUrl?: string | null;
   createdAt?: string;
+  isVerified?: boolean; // <--- ADD THIS LINE
 }
 
 export interface UserResponse {
