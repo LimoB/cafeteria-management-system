@@ -6,7 +6,8 @@ import locationReducer from './slices/locationSlice';
 import orderReducer from './slices/orderSlice';
 import paymentReducer from './slices/paymentSlice';
 import userReducer from './slices/userSlice';
-import cartReducer from './slices/cartSlice'; // 1. Import the cart reducer
+import cartReducer from './slices/cartSlice';
+import adminReducer from './slices/adminSlice';
 
 export const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ export const store = configureStore({
     payments: paymentReducer,
     users: userReducer,
     cart: cartReducer, // 2. Register it here
+    admin: adminReducer,
   },
 });
 

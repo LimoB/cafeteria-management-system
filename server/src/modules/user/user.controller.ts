@@ -2,13 +2,18 @@ import { Response, NextFunction } from "express";
 import { AuthenticatedRequest } from "../../middleware/auth.middleware";
 import * as UserService from "./user.service";
 
+/**
+ * GET /api/users
+ * Returns combined list of Students and Admins
+ */
 export const getUsers = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
+    // This now calls the service that merges 'users' and 'admins' tables
     const data = await UserService.getUsersServices();
     
     res.status(200).json({
       success: true,
-      count: data.length,
+      count: data.length, // This will now correctly show Admins + Students
       data
     });
   } catch (error) {
@@ -16,13 +21,19 @@ export const getUsers = async (req: AuthenticatedRequest, res: Response, next: N
   }
 };
 
+/**
+ * GET /api/users/:id
+ */
 export const getUserById = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const userId = parseInt(req.params.id);
     const user = await UserService.getUserByIdServices(userId);
     
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res.status(404).json({ 
+        success: false, 
+        message: "Personnel record not found" 
+      });
     }
     
     res.status(200).json({ success: true, data: user });
@@ -31,13 +42,21 @@ export const getUserById = async (req: AuthenticatedRequest, res: Response, next
   }
 };
 
+/**
+ * PATCH /api/users/:id
+ */
 export const updateUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const userId = parseInt(req.params.id);
     
-    // Security check: Students should only be able to update their OWN profile
-    if (req.user?.role !== 'admin' && req.user?.id !== userId) {
-        return res.status(403).json({ success: false, message: "Forbidden: You can only update your own profile" });
+    // Security check: Normalize role check for consistency
+    const userRole = req.user?.role?.toLowerCase();
+
+    if (userRole !== 'admin' && req.user?.id !== userId) {
+        return res.status(403).json({ 
+          success: false, 
+          message: "Access Denied: You cannot modify other personnel records" 
+        });
     }
 
     const updatedUser = await UserService.updateUserServices(userId, req.body);
@@ -48,7 +67,7 @@ export const updateUser = async (req: AuthenticatedRequest, res: Response, next:
 
     res.status(200).json({ 
       success: true, 
-      message: "User updated successfully", 
+      message: "Profile synchronized successfully", 
       data: updatedUser 
     });
   } catch (error) {
@@ -56,8 +75,16 @@ export const updateUser = async (req: AuthenticatedRequest, res: Response, next:
   }
 };
 
+/**
+ * DELETE /api/users/:id
+ */
 export const deleteUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
+    // Note: Usually, you don't want admins deleting other admins via this route
+    if (req.user?.role?.toLowerCase() !== 'admin') {
+      return res.status(403).json({ success: false, message: "Unauthorized: Admin privileges required" });
+    }
+
     const userId = parseInt(req.params.id);
     const success = await UserService.deleteUserServices(userId);
     
@@ -67,7 +94,7 @@ export const deleteUser = async (req: AuthenticatedRequest, res: Response, next:
 
     res.status(200).json({ 
       success: true, 
-      message: "User and associated records deleted successfully" 
+      message: "Personnel record and associated data purged" 
     });
   } catch (error) {
     next(error);

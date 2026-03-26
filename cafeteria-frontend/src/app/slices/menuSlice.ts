@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import * as menuApi from '../../api/menu';
-import { MenuItem, MenuState, MenuResponse } from '../../types/menu.types';
+import { MenuItem, MenuState } from '../../types/menu.types';
 
 const initialState: MenuState = {
   items: [],
@@ -13,10 +13,8 @@ const initialState: MenuState = {
 
 export const fetchMenu = createAsyncThunk('menu/fetchAll', async (_, thunkAPI) => {
   try {
-    // FIXED: Use 'as' to assert the specific type coming from the API
-    const response = (await menuApi.getMenu()) as MenuResponse<MenuItem[]>;
-    
-    // Supporting both { success: true, data: [] } and a direct array response
+    const response = await menuApi.getMenu();
+    // Extract data from { success: true, data: [...] } or handle direct array
     const menuData = response.data || response;
     return Array.isArray(menuData) ? (menuData as MenuItem[]) : [];
   } catch (error: any) {
@@ -27,9 +25,7 @@ export const fetchMenu = createAsyncThunk('menu/fetchAll', async (_, thunkAPI) =
 
 export const addMenuItem = createAsyncThunk('menu/add', async (formData: FormData, thunkAPI) => {
   try {
-    // FIXED: Assert as a single MenuItem response
-    const response = (await menuApi.createMenuItem(formData)) as MenuResponse<MenuItem>;
-    
+    const response = await menuApi.createMenuItem(formData);
     const newItem = response.data || response;
     return newItem as MenuItem;
   } catch (error: any) {
@@ -41,9 +37,7 @@ export const editMenuItem = createAsyncThunk(
   'menu/update',
   async ({ id, formData }: { id: number; formData: FormData }, thunkAPI) => {
     try {
-      // FIXED: Assert as a single MenuItem response
-      const response = (await menuApi.updateMenuItem(id, formData)) as MenuResponse<MenuItem>;
-      
+      const response = await menuApi.updateMenuItem(id, formData);
       const updatedItem = response.data || response;
       return updatedItem as MenuItem;
     } catch (error: any) {

@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, UtensilsCrossed, ClipboardList, 
   Users, LogOut, Menu as MenuIcon, ChefHat, 
-  Zap 
+  Zap, Clock, ShieldCheck, Globe
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { logout } from "../app/slices/authSlice";
@@ -16,7 +16,6 @@ const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  // TypeScript now recognizes 'user' correctly thanks to useAppSelector
   const { user } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
@@ -25,131 +24,172 @@ const AdminLayout: React.FC = () => {
   }, []);
 
   const navigation = [
-    { name: "Overview", href: "/admin/dashboard", icon: LayoutDashboard },
-    { name: "Menu Items", href: "/admin/menu", icon: UtensilsCrossed },
-    { name: "Live Orders", href: "/admin/orders", icon: ClipboardList },
-    { name: "Custom Requests", href: "/admin/custom-orders", icon: ChefHat },
-    { name: "Manage Users", href: "/admin/users", icon: Users },
+    { name: "Terminal", href: "/admin/dashboard", icon: LayoutDashboard },
+    { name: "Inventory", href: "/admin/menu", icon: UtensilsCrossed },
+    { name: "Live Queue", href: "/admin/orders", icon: ClipboardList },
+    { name: "Specials", href: "/admin/custom-orders", icon: ChefHat },
+    { name: "Directory", href: "/admin/users", icon: Users },
   ];
 
   const handleLogout = async () => {
     await dispatch(logout());
-    navigate("/auth/admin-login");
+    navigate("/auth/login");
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex font-sans selection:bg-red-100">
-      {/* Sidebar Overlay for Mobile */}
+    <div className="min-h-screen bg-[#F8FAFC] flex font-sans text-slate-900 selection:bg-orange-100 selection:text-orange-900">
+      
+      {/* --- GLASSMORPHIC SIDEBAR OVERLAY --- */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-slate-900/20 backdrop-blur-md z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* --- SIDEBAR --- */}
+      {/* --- LUXE GLASS SIDEBAR --- */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-72 bg-[#0F172A] text-white transform transition-transform duration-300 ease-in-out
-        lg:relative lg:translate-x-0 border-r border-white/5
-        ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+        fixed inset-y-0 left-0 z-50 w-72 bg-white/70 backdrop-blur-2xl border-r border-slate-200/60 transform transition-all duration-500 ease-in-out
+        lg:relative lg:translate-x-0 
+        ${isSidebarOpen ? "translate-x-0 shadow-2xl shadow-orange-900/10" : "-translate-x-full"}
       `}>
         <div className="flex flex-col h-full">
-          <div className="p-8 pb-4">
-            <div className="flex items-center gap-3 mb-10">
-              <div className="bg-red-600 p-2.5 rounded-2xl shadow-lg shadow-red-900/40">
-                <Zap className="text-white fill-white" size={22} />
+          
+          {/* Brand Header */}
+          <div className="p-8">
+            <div className="flex items-center gap-3 mb-12 group cursor-pointer">
+              <div className="bg-orange-500 p-2.5 rounded-2xl shadow-lg shadow-orange-500/30 group-hover:rotate-12 transition-all duration-300">
+                <Zap className="text-white fill-white" size={20} />
               </div>
               <div className="flex flex-col">
-                <span className="font-black text-xl leading-none tracking-tighter uppercase">
-                  LAIKIPIA<span className="text-red-600">.</span>STAFF
+                <span className="font-black text-xl tracking-tighter uppercase italic text-slate-900 leading-none">
+                  STAFF<span className="text-orange-500">.</span>OS
                 </span>
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mt-1">Control Center</span>
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1">V2.0 Core System</span>
               </div>
             </div>
 
-            <nav className="space-y-1.5">
+            {/* Navigation */}
+            <nav className="space-y-2">
               {navigation.map((item) => {
-                const isActive = location.pathname.startsWith(item.href);
+                const isActive = location.pathname === item.href;
                 return (
                   <Link
                     key={item.name}
                     to={item.href}
                     onClick={() => setSidebarOpen(false)}
                     className={`
-                      flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-sm transition-all group
+                      group flex items-center justify-between px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all duration-300
                       ${isActive 
-                        ? "bg-red-600 text-white shadow-xl shadow-red-900/20" 
-                        : "text-slate-400 hover:text-white hover:bg-white/5"}
+                        ? "bg-slate-900 text-white shadow-xl shadow-slate-900/20" 
+                        : "text-slate-400 hover:text-orange-600 hover:bg-orange-50/50"}
                     `}
                   >
-                    <item.icon size={18} className={isActive ? "scale-110" : "group-hover:scale-110 transition-transform"} />
-                    {item.name}
+                    <div className="flex items-center gap-4">
+                      <item.icon size={16} className={isActive ? "text-orange-400" : "group-hover:scale-110 transition-transform"} />
+                      {item.name}
+                    </div>
+                    {isActive && <div className="h-1 w-1 bg-orange-400 rounded-full animate-pulse" />}
                   </Link>
                 );
               })}
             </nav>
           </div>
 
-          <div className="mt-auto p-6 space-y-4">
-            <div className="bg-white/5 rounded-3xl p-5 border border-white/5">
-              <p className="text-[10px] font-black text-slate-500 uppercase mb-2 tracking-widest">Server Status</p>
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-xs font-bold text-slate-300">Daraja API Active</span>
-              </div>
-            </div>
-            
+          {/* Bottom Actions */}
+          <div className="mt-auto p-6 space-y-3">
+            <Link 
+              to="/home" 
+              className="flex items-center justify-center gap-3 w-full py-4 rounded-2xl bg-white/50 border border-slate-200 text-slate-500 font-black text-[10px] uppercase tracking-widest hover:border-orange-500 hover:text-orange-600 transition-all shadow-sm"
+            >
+              <Globe size={14} /> Portal Preview
+            </Link>
+
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-2xl font-black text-[10px] text-red-500 bg-red-500/5 hover:bg-red-500 hover:text-white transition-all uppercase tracking-[0.2em]"
+              className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-white border border-slate-200 text-red-500 font-black text-[10px] uppercase tracking-widest hover:bg-red-50 hover:border-red-200 transition-all"
             >
-              <LogOut size={16} /> End Session
+              <LogOut size={14} /> Termination
             </button>
           </div>
         </div>
       </aside>
 
-      {/* --- MAIN CONTENT --- */}
-      <main className="flex-grow flex flex-col min-w-0 h-screen overflow-y-auto">
-        <header className="h-24 bg-white/80 backdrop-blur-md border-b border-slate-200/60 flex items-center justify-between px-6 lg:px-10 sticky top-0 z-40">
-          <div className="flex items-center gap-4">
+      {/* --- MAIN CONTENT AREA --- */}
+      <main className="flex-grow flex flex-col h-screen overflow-hidden">
+        
+        {/* Floating Glass Header */}
+        <header className="h-20 bg-white/40 backdrop-blur-md border-b border-slate-200/60 flex items-center justify-between px-8 lg:px-12 shrink-0 z-40">
+          <div className="flex items-center gap-6">
             <button 
-              className="lg:hidden p-3 bg-slate-100 rounded-xl text-slate-900" 
+              className="lg:hidden text-slate-900 p-2 bg-white rounded-xl shadow-sm border border-slate-200" 
               onClick={() => setSidebarOpen(true)}
             >
-              <MenuIcon size={20} />
+              <MenuIcon size={18} />
             </button>
             <div className="hidden sm:block">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Local Time</p>
-              <p className="text-sm font-black text-slate-900">
-                {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              <div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                <Clock size={12} className="text-orange-500" /> System Uptime
+              </div>
+              <p className="text-lg font-black text-slate-900 tabular-nums tracking-tighter">
+                {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 lg:gap-6">
-             <div className="flex flex-col items-end hidden xs:flex text-right">
-                <p className="text-sm font-black text-slate-900 leading-none">
-                  {user?.name || user?.username || "Staff Admin"}
+          <div className="flex items-center gap-6">
+            <div className="hidden xs:flex flex-col items-end">
+              <div className="flex items-center gap-2">
+                <span className="bg-orange-100 text-orange-600 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter flex items-center gap-1 border border-orange-200">
+                  <ShieldCheck size={10} /> Root Access
+                </span>
+                <p className="text-[11px] font-black text-slate-900 uppercase tracking-widest">
+                  {user?.name || user?.username || "Admin"}
                 </p>
-                <p className="text-[10px] font-bold text-red-600 uppercase tracking-widest mt-1 italic">
-                  Level: Administrator
-                </p>
-             </div>
-             
-             <div className="h-12 w-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-black border-4 border-white shadow-lg overflow-hidden shrink-0">
-                {user?.avatarUrl ? (
-                  <img src={user.avatarUrl} alt="Staff" className="w-full h-full object-cover" />
-                ) : (
-                  (user?.name || "A").charAt(0).toUpperCase()
-                )}
-             </div>
+              </div>
+            </div>
+            
+            <div className="h-10 w-10 p-0.5 rounded-xl bg-gradient-to-tr from-slate-200 to-slate-100 shadow-inner overflow-hidden shrink-0 group hover:scale-105 transition-transform cursor-pointer">
+               <div className="w-full h-full rounded-[9px] bg-white overflow-hidden flex items-center justify-center">
+                 {user?.avatarUrl ? (
+                   <img src={user.avatarUrl} alt="Admin" className="w-full h-full object-cover" />
+                 ) : (
+                   <span className="text-slate-400 font-black text-sm">
+                    {(user?.name || "A").charAt(0).toUpperCase()}
+                   </span>
+                 )}
+               </div>
+            </div>
           </div>
         </header>
 
-        <div className="p-6 lg:p-12 max-w-[1600px] mx-auto w-full">
-          {/* Dashboard contents render here */}
-          <Outlet />
+        {/* Workspace */}
+        <div className="flex-grow overflow-y-auto p-6 lg:p-10 scrollbar-hide">
+          <div className="max-w-7xl mx-auto">
+            
+            {/* Page Title */}
+            <div className="mb-10 flex items-center justify-between">
+               <div>
+                  <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">
+                    {navigation.find(n => n.href === location.pathname)?.name || "Management"}
+                    <span className="text-orange-500">.</span>
+                  </h1>
+                  <div className="h-1 w-8 bg-orange-500 rounded-full mt-2" />
+               </div>
+               
+               {/* Contextual Action Button (Optional UI element) */}
+               <div className="hidden md:block">
+                  <div className="bg-white border border-slate-200 px-4 py-2 rounded-2xl flex items-center gap-3 shadow-sm">
+                    <div className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Server: Online</span>
+                  </div>
+               </div>
+            </div>
+
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <Outlet />
+            </div>
+          </div>
         </div>
       </main>
     </div>

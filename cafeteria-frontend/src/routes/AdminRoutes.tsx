@@ -9,25 +9,22 @@ import AddMenu from '../pages/admin/menu/AddMenu';
 import AdminOrders from '../pages/admin/orders/AdminOrders';
 import AdminCustomOrders from '../pages/admin/custom-orders/AdminCustomOrders';
 import UserList from '../pages/admin/users/UserList';
+import AddUser from '../pages/admin/users/AddUser'; // Import the new page component
 
 const AdminRoutes = () => {
   return (
     <Routes>
-      {/* 1. Protect the entire /admin/* branch. 
-        Only users with the 'admin' role in authSlice can pass.
-      */}
+      {/* 1. Protect the entire /admin/* branch */}
       <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
         
-        {/* 2. Wrap all admin pages in the AdminLayout.
-          This provides the Sidebar and shared Navigation UI.
-        */}
+        {/* 2. Wrap all admin pages in the AdminLayout */}
         <Route element={<AdminLayout />}>
-          {/* Default Redirect from /admin to /admin/dashboard */}
+          {/* Default Redirect */}
           <Route index element={<Navigate to="dashboard" replace />} />
           
           <Route path="dashboard" element={<AdminDashboard />} />
           
-          {/* Menu Management - Using your tree structure paths */}
+          {/* Menu Management */}
           <Route path="menu" element={<MenuList />} />
           <Route path="menu/add" element={<AddMenu />} />
           <Route path="menu/edit/:id" element={<AddMenu />} />
@@ -38,6 +35,8 @@ const AdminRoutes = () => {
           
           {/* User Management */}
           <Route path="users" element={<UserList />} />
+          {/* New Path for Adding/Registering Users */}
+          <Route path="users/add" element={<AddUser />} />
         </Route>
 
       </Route>

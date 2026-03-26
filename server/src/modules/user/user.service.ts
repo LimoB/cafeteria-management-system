@@ -1,16 +1,14 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../db/instance";
-import { users } from "../../config/schema";
+import { users, admins } from "../../config/schema"; // Import both tables
 import { InferSelectModel } from "drizzle-orm";
 
-// Type for a User (selecting)
-type User = InferSelectModel<typeof users>;
-
 /**
- * Get all users (Admin view) 
+ * Get all personnel (Combines Users and Admins for the Directory)
  */
 export const getUsersServices = async () => {
-    return await db.query.users.findMany({
+    // 1. Fetch Students (Users)
+    const allStudents = await db.query.users.findMany({
         columns: {
             password: false,
         },
@@ -19,10 +17,36 @@ export const getUsersServices = async () => {
             customOrders: true,
         },
     });
+
+    // 2. Fetch System Admins
+    const allAdmins = await db.query.admins.findMany({
+        columns: {
+            password: false,
+        }
+    });
+
+    // 3. Normalize and Combine
+    // We manually map the 'role' so the frontend can differentiate them
+    const formattedStudents = allStudents.map(student => ({
+        ...student,
+        role: 'student' as const
+    }));
+
+    const formattedAdmins = allAdmins.map(admin => ({
+        ...admin,
+        role: 'admin' as const,
+        // Admins don't have these fields in your schema, so we provide defaults
+        email: `${admin.username}@system.os`, 
+        registerNumber: 'SYS-ADMIN',
+        department: 'Information Systems',
+        phone: 'N/A'
+    }));
+
+    return [...formattedAdmins, ...formattedStudents];
 };
 
 /**
- * Get single user by ID with full history
+ * Get single user by ID (Student logic)
  */
 export const getUserByIdServices = async (userId: number) => {
     const result = await db.query.users.findFirst({
@@ -39,13 +63,13 @@ export const getUserByIdServices = async (userId: number) => {
             customOrders: true,
         },
     });
-    return result ?? null;
+    return result ? { ...result, role: 'student' } : null;
 };
 
 /**
- * Update user profile
+ * Update user profile (Student logic)
  */
-export const updateUserServices = async (userId: number, data: Partial<User>) => {
+export const updateUserServices = async (userId: number, data: any) => {
     const [result] = await db
         .update(users)
         .set(data)
@@ -62,7 +86,7 @@ export const updateUserServices = async (userId: number, data: Partial<User>) =>
 };
 
 /**
- * Delete a user
+ * Delete a user (Student logic)
  */
 export const deleteUserServices = async (userId: number) => {
     const result = await db
